@@ -56,18 +56,12 @@ pub trait PackageRepository {
 
     /// Return all versions for a given CPN, with their metadata.
     fn versions_for(&self, cpn: &Cpn) -> Vec<(Cpv, PackageVersions)>;
-
-    /// Return all known slots for a given CPN.
-    ///
-    /// See [PMS 7.2](https://projects.gentoo.org/pms/9/pms.html#mandatory-ebuilddefined-variables).
-    fn slots_for(&self, cpn: &Cpn) -> Vec<Interned<DefaultInterner>>;
 }
 
 /// A simple in-memory repository for testing.
 #[derive(Clone)]
 pub struct InMemoryRepository {
     packages: HashMap<Cpn, Vec<(Cpv, PackageVersions)>>,
-    slots: HashMap<Cpn, Vec<Interned<DefaultInterner>>>,
 }
 
 impl Default for InMemoryRepository {
@@ -80,7 +74,6 @@ impl InMemoryRepository {
     pub fn new() -> Self {
         Self {
             packages: HashMap::new(),
-            slots: HashMap::new(),
         }
     }
 
@@ -115,12 +108,6 @@ impl InMemoryRepository {
         deps: PackageDeps,
     ) {
         let cpn = Cpn::parse(&format!("{}/{}", cpv.cpn.category, cpv.cpn.package)).unwrap();
-        if let Some(s) = &slot {
-            let entry = self.slots.entry(cpn).or_default();
-            if !entry.iter().any(|existing| existing.as_str() == s.as_str()) {
-                entry.push(*s);
-            }
-        }
         self.packages.entry(cpn).or_default().push((
             cpv,
             PackageVersions {
@@ -168,10 +155,6 @@ impl PackageRepository for InMemoryRepository {
             })
             .unwrap_or_default()
     }
-
-    fn slots_for(&self, cpn: &Cpn) -> Vec<Interned<DefaultInterner>> {
-        self.slots.get(cpn).cloned().unwrap_or_default()
-    }
 }
 
 #[cfg(test)]
@@ -197,6 +180,5 @@ mod tests {
         );
         assert_eq!(repo.all_packages().len(), 1);
         assert_eq!(repo.versions_for(&cpn).len(), 1);
-        assert_eq!(repo.slots_for(&cpn), vec![Interned::intern("0")]);
     }
 }

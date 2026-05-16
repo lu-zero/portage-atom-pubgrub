@@ -90,9 +90,15 @@ impl PortageDependencyProvider {
         let mut cpn_slots: HashMap<portage_atom::Cpn, Vec<Interned<DefaultInterner>>> =
             HashMap::new();
 
-        // First pass: collect slots per CPN.
+        // First pass: collect slots per CPN directly from version metadata.
+        // This ensures slots are derived from the same filtered data that
+        // versions_for provides, avoiding phantom slots for live/9999 ebuilds.
         for cpn in repo.all_packages() {
-            let slots = repo.slots_for(&cpn);
+            let versions = repo.versions_for(&cpn);
+            let mut slots: Vec<Interned<DefaultInterner>> =
+                versions.iter().filter_map(|(_, meta)| meta.slot).collect();
+            slots.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+            slots.dedup();
             if !slots.is_empty() {
                 cpn_slots.insert(cpn, slots);
             }
