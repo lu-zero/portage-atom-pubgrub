@@ -97,7 +97,10 @@ mod tests {
     fn different_slots_are_different_packages() {
         let cpn = Cpn::parse("dev-lang/python").unwrap();
         let p1 = PortagePackage::slotted(cpn, Interned::intern("3.11"));
-        let p2 = PortagePackage::slotted(Cpn::parse("dev-lang/python").unwrap(), Interned::intern("3.12"));
+        let p2 = PortagePackage::slotted(
+            Cpn::parse("dev-lang/python").unwrap(),
+            Interned::intern("3.12"),
+        );
         assert_ne!(p1, p2);
     }
 
@@ -105,7 +108,10 @@ mod tests {
     fn same_slot_is_same_package() {
         let cpn = Cpn::parse("dev-lang/python").unwrap();
         let p1 = PortagePackage::slotted(cpn, Interned::intern("3.12"));
-        let p2 = PortagePackage::slotted(Cpn::parse("dev-lang/python").unwrap(), Interned::intern("3.12"));
+        let p2 = PortagePackage::slotted(
+            Cpn::parse("dev-lang/python").unwrap(),
+            Interned::intern("3.12"),
+        );
         assert_eq!(p1, p2);
     }
 }
