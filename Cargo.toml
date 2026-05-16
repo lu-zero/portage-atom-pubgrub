@@ -1,0 +1,17 @@
+[package]
+name = "portage-atom-pubgrub"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+authors = ["Luca Barbato <lu_zero@gentoo.org>"]
+license = "MIT"
+description = "Bridge between portage-atom and the PubGrub dependency solver"
+repository = "https://github.com/lu-zero/portage-atom-pubgrub"
+keywords = ["gentoo", "portage", "pubgrub", "dependency", "solver"]
+categories = ["algorithms", "development-tools"]
+
+[dependencies]
+portage-atom = "0.8"
+pubgrub = "0.4"
+version-ranges = "0.1"
+thiserror = "2"
