@@ -219,13 +219,7 @@ impl PortageDependencyProvider {
                     vd.merged = Dependencies::Available(kept.into_iter().collect());
                 }
                 for class in &mut vd.by_class {
-                    let before = class.len();
                     class.retain(|(pkg, _)| known.contains(pkg));
-                    let dropped = before - class.len();
-                    if dropped > 0 {
-                        // by_class entries that were filtered are not individually
-                        // tracked — the merged list above captures them.
-                    }
                 }
             }
         }
@@ -277,7 +271,7 @@ impl PortageDependencyProvider {
         let root_ver = Version::parse("0").unwrap();
 
         let constraints: DependencyConstraints<PortagePackage, PortageVersionSet> =
-            targets.clone().into_iter().collect();
+            targets.iter().cloned().collect();
         let vd = VersionDeps {
             merged: Dependencies::Available(constraints),
             by_class: vec![targets, vec![], vec![], vec![], vec![]],
@@ -294,7 +288,7 @@ impl PortageDependencyProvider {
         entry.versions.insert(root_ver.clone(), vd);
 
         let solution = pubgrub::resolve(self, root.clone(), root_ver)?;
-
+        self.packages.remove(&root);
         Ok(solution.into_iter().filter(|(p, _)| *p != root).collect())
     }
 }
@@ -409,36 +403,24 @@ mod tests {
     use portage_atom::gentoo_interner::Interned;
     use portage_atom::{Cpn, Dep, DepEntry};
 
+    fn empty_deps() -> PackageDeps {
+        PackageDeps {
+            depend: vec![],
+            rdepend: vec![],
+            bdepend: vec![],
+            pdepend: vec![],
+            idepend: vec![],
+        }
+    }
+
     fn make_simple_repo() -> InMemoryRepository {
         let mut repo = InMemoryRepository::new();
 
         let openssl_cpv = portage_atom::Cpv::parse("dev-libs/openssl-3.0.0").unwrap();
-        repo.add_version(
-            openssl_cpv,
-            Some(Interned::intern("0")),
-            None,
-            PackageDeps {
-                depend: vec![],
-                rdepend: vec![],
-                bdepend: vec![],
-                pdepend: vec![],
-                idepend: vec![],
-            },
-        );
+        repo.add_version(openssl_cpv, Some(Interned::intern("0")), None, empty_deps());
 
         let openssl_cpv2 = portage_atom::Cpv::parse("dev-libs/openssl-3.1.0").unwrap();
-        repo.add_version(
-            openssl_cpv2,
-            Some(Interned::intern("0")),
-            None,
-            PackageDeps {
-                depend: vec![],
-                rdepend: vec![],
-                bdepend: vec![],
-                pdepend: vec![],
-                idepend: vec![],
-            },
-        );
+        repo.add_version(openssl_cpv2, Some(Interned::intern("0")), None, empty_deps());
 
         let rust_cpv = portage_atom::Cpv::parse("dev-lang/rust-1.75.0").unwrap();
         repo.add_version(
@@ -504,25 +486,18 @@ mod tests {
     #[test]
     fn multi_slot_installs_both_when_required() {
         let mut repo = InMemoryRepository::new();
-        let empty = || PackageDeps {
-            depend: vec![],
-            rdepend: vec![],
-            bdepend: vec![],
-            pdepend: vec![],
-            idepend: vec![],
-        };
 
         repo.add_version(
             portage_atom::Cpv::parse("dev-lang/python-3.11.9").unwrap(),
             Some(Interned::intern("3.11")),
             None,
-            empty(),
+            empty_deps(),
         );
         repo.add_version(
             portage_atom::Cpv::parse("dev-lang/python-3.12.4").unwrap(),
             Some(Interned::intern("3.12")),
             None,
-            empty(),
+            empty_deps(),
         );
         repo.add_version(
             portage_atom::Cpv::parse("app-misc/myapp-1.0").unwrap(),
@@ -569,19 +544,12 @@ mod tests {
     #[test]
     fn resolve_slot_operator_equal() {
         let mut repo = InMemoryRepository::new();
-        let empty = || PackageDeps {
-            depend: vec![],
-            rdepend: vec![],
-            bdepend: vec![],
-            pdepend: vec![],
-            idepend: vec![],
-        };
 
         repo.add_version(
             portage_atom::Cpv::parse("dev-libs/openssl-3.0.0").unwrap(),
             Some(Interned::intern("0")),
             None,
-            empty(),
+            empty_deps(),
         );
         repo.add_version(
             portage_atom::Cpv::parse("app-misc/myapp-1.0").unwrap(),
@@ -615,19 +583,12 @@ mod tests {
     #[test]
     fn resolve_slot_operator_star() {
         let mut repo = InMemoryRepository::new();
-        let empty = || PackageDeps {
-            depend: vec![],
-            rdepend: vec![],
-            bdepend: vec![],
-            pdepend: vec![],
-            idepend: vec![],
-        };
 
         repo.add_version(
             portage_atom::Cpv::parse("dev-libs/openssl-3.0.0").unwrap(),
             Some(Interned::intern("0")),
             None,
-            empty(),
+            empty_deps(),
         );
         repo.add_version(
             portage_atom::Cpv::parse("app-misc/myapp-1.0").unwrap(),
@@ -652,25 +613,18 @@ mod tests {
     #[test]
     fn installed_favored_picks_installed_version() {
         let mut repo = InMemoryRepository::new();
-        let empty = || PackageDeps {
-            depend: vec![],
-            rdepend: vec![],
-            bdepend: vec![],
-            pdepend: vec![],
-            idepend: vec![],
-        };
 
         repo.add_version(
             portage_atom::Cpv::parse("dev-libs/openssl-3.0.0").unwrap(),
             None,
             None,
-            empty(),
+            empty_deps(),
         );
         repo.add_version(
             portage_atom::Cpv::parse("dev-libs/openssl-3.1.0").unwrap(),
             None,
             None,
-            empty(),
+            empty_deps(),
         );
         repo.add_version(
             portage_atom::Cpv::parse("app-misc/myapp-1.0").unwrap(),
@@ -709,25 +663,18 @@ mod tests {
     #[test]
     fn installed_favored_upgrades_when_required() {
         let mut repo = InMemoryRepository::new();
-        let empty = || PackageDeps {
-            depend: vec![],
-            rdepend: vec![],
-            bdepend: vec![],
-            pdepend: vec![],
-            idepend: vec![],
-        };
 
         repo.add_version(
             portage_atom::Cpv::parse("dev-libs/openssl-3.0.0").unwrap(),
             None,
             None,
-            empty(),
+            empty_deps(),
         );
         repo.add_version(
             portage_atom::Cpv::parse("dev-libs/openssl-3.1.0").unwrap(),
             None,
             None,
-            empty(),
+            empty_deps(),
         );
         repo.add_version(
             portage_atom::Cpv::parse("app-misc/myapp-1.0").unwrap(),
@@ -766,25 +713,18 @@ mod tests {
     #[test]
     fn installed_locked_pins_version() {
         let mut repo = InMemoryRepository::new();
-        let empty = || PackageDeps {
-            depend: vec![],
-            rdepend: vec![],
-            bdepend: vec![],
-            pdepend: vec![],
-            idepend: vec![],
-        };
 
         repo.add_version(
             portage_atom::Cpv::parse("dev-libs/openssl-3.0.0").unwrap(),
             None,
             None,
-            empty(),
+            empty_deps(),
         );
         repo.add_version(
             portage_atom::Cpv::parse("dev-libs/openssl-3.1.0").unwrap(),
             None,
             None,
-            empty(),
+            empty_deps(),
         );
         repo.add_version(
             portage_atom::Cpv::parse("app-misc/myapp-1.0").unwrap(),

@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{BinaryHeap, HashMap};
 
-use portage_atom::Version;
+use portage_atom::{Cpn, Version};
 use pubgrub::VersionSet;
 
 use crate::package::PortagePackage;
@@ -53,6 +53,12 @@ impl PortageDependencyProvider {
             DepClass::Idepend,
         ];
 
+        // Index solution by CPN so dependency lookups are O(1) instead of O(n).
+        let mut by_cpn: HashMap<&Cpn, Vec<(&PortagePackage, &Version)>> = HashMap::new();
+        for (sol_pkg, sol_ver) in solution.iter() {
+            by_cpn.entry(&sol_pkg.cpn).or_default().push((sol_pkg, sol_ver));
+        }
+
         for (pkg, version) in solution.iter() {
             let Some(data) = self.packages.get(pkg) else {
                 continue;
@@ -63,13 +69,15 @@ impl PortageDependencyProvider {
 
             for (class_idx, &class) in classes.iter().enumerate() {
                 for (dep_pkg, dep_vs) in &vd.by_class[class_idx] {
-                    for (sol_pkg, sol_ver) in solution.iter() {
-                        if sol_pkg.cpn == dep_pkg.cpn && dep_vs.contains(sol_ver) {
-                            edges.push(DepEdge {
-                                from: (pkg.clone(), version.clone()),
-                                to: (sol_pkg.clone(), sol_ver.clone()),
-                                class,
-                            });
+                    if let Some(candidates) = by_cpn.get(&dep_pkg.cpn) {
+                        for &(sol_pkg, sol_ver) in candidates {
+                            if dep_vs.contains(sol_ver) {
+                                edges.push(DepEdge {
+                                    from: (pkg.clone(), version.clone()),
+                                    to: (sol_pkg.clone(), sol_ver.clone()),
+                                    class,
+                                });
+                            }
                         }
                     }
                 }
@@ -118,12 +126,13 @@ impl PortageDependencyProvider {
             }
         }
 
-        let mut queue: Vec<String> = in_degree
+        // BinaryHeap is a max-heap: pop() yields the lexicographically largest
+        // key first, giving deterministic output without O(n) Vec::insert.
+        let mut queue: BinaryHeap<String> = in_degree
             .iter()
             .filter(|&(_, &deg)| deg == 0)
             .map(|(k, _)| k.clone())
             .collect();
-        queue.sort();
 
         let mut result = Vec::new();
         while let Some(key) = queue.pop() {
@@ -135,10 +144,7 @@ impl PortageDependencyProvider {
                     if let Some(deg) = in_degree.get_mut(neighbor) {
                         *deg -= 1;
                         if *deg == 0 {
-                            let pos = queue.binary_search_by(|p| p.as_str().cmp(neighbor.as_str()));
-                            match pos {
-                                Ok(i) | Err(i) => queue.insert(i, neighbor.clone()),
-                            }
+                            queue.push(neighbor.clone());
                         }
                     }
                 }

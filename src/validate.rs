@@ -864,8 +864,6 @@ mod tests {
 
     #[test]
     fn check_blockers_respects_slot() {
-        use super::*;
-
         let mut repo = InMemoryRepository::new();
         let empty = || PackageDeps {
             depend: vec![],

@@ -25,7 +25,6 @@ mod use_config;
 mod validate;
 mod version_set;
 
-pub use convert::{RepoConstraint, SlotOperatorDep, UseDepConstraint};
 pub use error::{Error, Result};
 pub use graph::{DepClass, DepEdge};
 pub use package::PortagePackage;

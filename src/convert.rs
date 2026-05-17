@@ -20,7 +20,7 @@ fn next_choice_id() -> u64 {
 /// The solver picks exactly one version of this package, and each version's
 /// dependencies are one alternative from the group.
 #[derive(Clone)]
-pub struct VirtualChoice {
+pub(crate) struct VirtualChoice {
     /// The virtual package to register in the provider.
     pub package: PortagePackage,
     /// (version, dependencies for that version).
@@ -29,7 +29,7 @@ pub struct VirtualChoice {
 
 /// Result of converting a dependency tree.
 #[derive(Clone)]
-pub struct ConversionResult {
+pub(crate) struct ConversionResult {
     /// Direct dependency constraints.
     pub requirements: Vec<(PortagePackage, PortageVersionSet)>,
     /// Blocker atoms for post-solve validation.
@@ -54,7 +54,7 @@ pub struct ConversionResult {
 ///
 /// See [PMS 8.3.3](https://projects.gentoo.org/pms/9/pms.html#slot_deps).
 #[derive(Debug, Clone)]
-pub struct SlotOperatorDep {
+pub(crate) struct SlotOperatorDep {
     /// The target package and version range.
     pub target: (PortagePackage, PortageVersionSet),
     /// The slot operator (`Equal` for `:=` / `:0=`).
@@ -68,7 +68,7 @@ pub struct SlotOperatorDep {
 ///
 /// See [PMS 8.3.5](https://projects.gentoo.org/pms/9/pms.html#repository).
 #[derive(Debug, Clone)]
-pub struct RepoConstraint {
+pub(crate) struct RepoConstraint {
     /// The target package that must come from a specific repo.
     pub target: (PortagePackage, PortageVersionSet),
     /// The required repository name.
@@ -79,7 +79,7 @@ pub struct RepoConstraint {
 ///
 /// See [PMS 8.3.4](https://projects.gentoo.org/pms/9/pms.html#style-and-style-use-dependencies).
 #[derive(Debug, Clone)]
-pub struct UseDepConstraint {
+pub(crate) struct UseDepConstraint {
     /// The package that must satisfy the USE constraints.
     pub target: (PortagePackage, PortageVersionSet),
     /// The USE flag constraints on that package.
