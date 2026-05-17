@@ -40,6 +40,16 @@ impl PortagePackage {
         }
     }
 
+    /// Create a synthetic root package used internally by [`resolve_targets`](crate::PortageDependencyProvider::resolve_targets).
+    ///
+    /// Uses a category that cannot appear in real ebuild repos.
+    pub(crate) fn synthetic_root() -> Self {
+        Self {
+            cpn: Cpn::parse("__internal__/root").unwrap(),
+            slot: None,
+        }
+    }
+
     /// Returns the display string without slot suffix.
     pub fn cpn_str(&self) -> String {
         self.cpn.to_string()

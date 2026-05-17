@@ -5,7 +5,7 @@ use portage_atom::gentoo_interner::{DefaultInterner, Interned};
 use portage_atom::{Dep, Version};
 use pubgrub::{
     Dependencies, DependencyConstraints, DependencyProvider, PackageResolutionStatistics,
-    VersionSet,
+    SelectedDependencies, VersionSet,
 };
 
 use crate::convert;
@@ -257,24 +257,32 @@ impl PortageDependencyProvider {
         &self.dropped_deps
     }
 
-    /// Register a virtual root package with explicit dependencies.
+    /// Resolve a set of target packages using PubGrub.
     ///
-    /// Since pubgrub resolves from a single root package+version, this method
-    /// lets you create a `virtual/root` whose dependencies are the set of
-    /// packages you want installed.
-    pub fn add_root(
+    /// Creates an internal synthetic root package whose dependencies are the
+    /// given `targets`, runs the solver, and returns the solution with the
+    /// root excluded. Callers never see the synthetic root.
+    ///
+    /// Each target is a `(PortagePackage, PortageVersionSet)` pair, e.g. the
+    /// package `dev-libs/openssl` with the version set `>=3.0`.
+    #[allow(clippy::result_large_err)]
+    pub fn resolve_targets(
         &mut self,
-        root: PortagePackage,
-        version: Version,
-        deps: Vec<(PortagePackage, PortageVersionSet)>,
-    ) {
+        targets: Vec<(PortagePackage, PortageVersionSet)>,
+    ) -> std::result::Result<
+        SelectedDependencies<PortagePackage, Version>,
+        pubgrub::PubGrubError<Self>,
+    > {
+        let root = PortagePackage::synthetic_root();
+        let root_ver = Version::parse("0").unwrap();
+
         let constraints: DependencyConstraints<PortagePackage, PortageVersionSet> =
-            deps.clone().into_iter().collect();
+            targets.clone().into_iter().collect();
         let vd = VersionDeps {
             merged: Dependencies::Available(constraints),
-            by_class: vec![deps, vec![], vec![], vec![], vec![]],
+            by_class: vec![targets, vec![], vec![], vec![], vec![]],
         };
-        let entry = self.packages.entry(root).or_insert_with(|| PackageData {
+        let entry = self.packages.entry(root.clone()).or_insert_with(|| PackageData {
             versions: BTreeMap::new(),
             blockers: BTreeMap::new(),
             use_deps: BTreeMap::new(),
@@ -283,7 +291,11 @@ impl PortageDependencyProvider {
             repo_constraints: BTreeMap::new(),
             slot_operator_deps: BTreeMap::new(),
         });
-        entry.versions.insert(version, vd);
+        entry.versions.insert(root_ver.clone(), vd);
+
+        let solution = pubgrub::resolve(self, root.clone(), root_ver)?;
+
+        Ok(solution.into_iter().filter(|(p, _)| *p != root).collect())
     }
 }
 
@@ -681,16 +693,10 @@ mod tests {
             policy: InstalledPolicy::Favor,
         });
 
-        let root = PortagePackage::unslotted(Cpn::parse("virtual/root").unwrap());
-        let root_ver = Version::parse("1").unwrap();
         let myapp = PortagePackage::unslotted(Cpn::parse("app-misc/myapp").unwrap());
-        provider.add_root(
-            root.clone(),
-            root_ver.clone(),
-            vec![(myapp, PortageVersionSet::any())],
-        );
-
-        let solution = pubgrub::resolve(&provider, root, root_ver).unwrap();
+        let solution = provider
+            .resolve_targets(vec![(myapp, PortageVersionSet::any())])
+            .unwrap();
         assert_eq!(
             solution.get(&PortagePackage::unslotted(
                 Cpn::parse("dev-libs/openssl").unwrap()
@@ -744,16 +750,10 @@ mod tests {
             policy: InstalledPolicy::Favor,
         });
 
-        let root = PortagePackage::unslotted(Cpn::parse("virtual/root").unwrap());
-        let root_ver = Version::parse("1").unwrap();
         let myapp = PortagePackage::unslotted(Cpn::parse("app-misc/myapp").unwrap());
-        provider.add_root(
-            root.clone(),
-            root_ver.clone(),
-            vec![(myapp, PortageVersionSet::any())],
-        );
-
-        let solution = pubgrub::resolve(&provider, root, root_ver).unwrap();
+        let solution = provider
+            .resolve_targets(vec![(myapp, PortageVersionSet::any())])
+            .unwrap();
         assert_eq!(
             solution.get(&PortagePackage::unslotted(
                 Cpn::parse("dev-libs/openssl").unwrap()
@@ -807,16 +807,10 @@ mod tests {
             policy: InstalledPolicy::Lock,
         });
 
-        let root = PortagePackage::unslotted(Cpn::parse("virtual/root").unwrap());
-        let root_ver = Version::parse("1").unwrap();
         let myapp = PortagePackage::unslotted(Cpn::parse("app-misc/myapp").unwrap());
-        provider.add_root(
-            root.clone(),
-            root_ver.clone(),
-            vec![(myapp, PortageVersionSet::any())],
-        );
-
-        let solution = pubgrub::resolve(&provider, root, root_ver).unwrap();
+        let solution = provider
+            .resolve_targets(vec![(myapp, PortageVersionSet::any())])
+            .unwrap();
         assert_eq!(
             solution.get(&PortagePackage::unslotted(
                 Cpn::parse("dev-libs/openssl").unwrap()

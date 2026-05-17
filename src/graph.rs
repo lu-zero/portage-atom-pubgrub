@@ -188,16 +188,11 @@ mod tests {
         );
 
         let mut provider = PortageDependencyProvider::new(repo, UseConfig::new());
-        let root = PortagePackage::unslotted(Cpn::parse("virtual/root").unwrap());
-        let root_ver = Version::parse("1").unwrap();
         let top = PortagePackage::unslotted(Cpn::parse("app-misc/top").unwrap());
-        provider.add_root(
-            root.clone(),
-            root_ver.clone(),
-            vec![(top, PortageVersionSet::any())],
-        );
 
-        let solution = pubgrub::resolve(&provider, root, root_ver).unwrap();
+        let solution = provider
+            .resolve_targets(vec![(top, PortageVersionSet::any())])
+            .unwrap();
 
         let edges = provider.dependency_graph(&solution);
         assert!(
@@ -253,16 +248,11 @@ mod tests {
         );
 
         let mut provider = PortageDependencyProvider::new(repo, UseConfig::new());
-        let root = PortagePackage::unslotted(Cpn::parse("virtual/root").unwrap());
-        let root_ver = Version::parse("1").unwrap();
         let app = PortagePackage::unslotted(Cpn::parse("app-misc/app").unwrap());
-        provider.add_root(
-            root.clone(),
-            root_ver.clone(),
-            vec![(app, PortageVersionSet::any())],
-        );
 
-        let solution = pubgrub::resolve(&provider, root, root_ver).unwrap();
+        let solution = provider
+            .resolve_targets(vec![(app, PortageVersionSet::any())])
+            .unwrap();
         let edges = provider.dependency_graph(&solution);
 
         let dep_classes: Vec<_> = edges.iter().map(|e| e.class).collect();

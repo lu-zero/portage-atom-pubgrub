@@ -3,12 +3,11 @@
 //! Each scenario builds a tiny repository, attempts to solve, and prints
 //! the error produced by PubGrub's solver.
 
-use portage_atom::{Cpn, Cpv, Dep, DepEntry, Version};
+use portage_atom::{Cpn, Cpv, Dep, DepEntry};
 use portage_atom_pubgrub::{
     InMemoryRepository, PackageDeps, PortageDependencyProvider, PortagePackage, PortageVersionSet,
     UseConfig,
 };
-use pubgrub::Reporter;
 
 fn empty_deps() -> PackageDeps {
     PackageDeps {
@@ -52,27 +51,12 @@ fn try_solve(title: &str, repo: &InMemoryRepository, root_atoms: &[&str]) {
     let use_config = UseConfig::new();
     let mut provider = PortageDependencyProvider::new(repo.clone(), use_config);
 
-    let root = PortagePackage::unslotted(Cpn::parse("virtual/root").unwrap());
-    let root_version = Version::parse("1").unwrap();
-    provider.add_root(
-        root.clone(),
-        root_version.clone(),
-        make_root_deps(root_atoms),
-    );
-
-    match pubgrub::resolve(&provider, root, root_version) {
+    match provider.resolve_targets(make_root_deps(root_atoms)) {
         Ok(_solution) => {
             println!("  Resolved successfully (unexpected for this example).");
         }
-        Err(pubgrub::PubGrubError::NoSolution(derivation)) => {
-            println!("  No solution found.");
-            println!(
-                "  Explanation: {}",
-                pubgrub::DefaultStringReporter::report(&derivation)
-            );
-        }
         Err(e) => {
-            println!("  Error: {e:?}");
+            println!("  No solution: {e:?}");
         }
     }
 }
@@ -149,15 +133,8 @@ fn main() {
 
         let use_config = UseConfig::new();
         let mut provider = PortageDependencyProvider::new(repo.clone(), use_config);
-        let root = PortagePackage::unslotted(Cpn::parse("virtual/root").unwrap());
-        let root_version = Version::parse("1").unwrap();
-        provider.add_root(
-            root.clone(),
-            root_version.clone(),
-            make_root_deps(&["app-misc/myapp"]),
-        );
 
-        match pubgrub::resolve(&provider, root, root_version) {
+        match provider.resolve_targets(make_root_deps(&["app-misc/myapp"])) {
             Ok(solution) => {
                 let blockers = provider.check_blockers(&solution);
                 if blockers.is_empty() {

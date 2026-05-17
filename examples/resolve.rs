@@ -4,13 +4,10 @@
 //! transitive deps, `|| ()` any-of (openssl vs libressl), versioned constraints,
 //! and USE-conditional dependencies.
 //!
-//! Since PubGrub resolves from a single root package+version, we create a
-//! `virtual/root` package whose dependencies are the packages we want installed.
-//!
 //! Runs the solver three times with different USE flag configurations.
 
 use portage_atom::gentoo_interner::Interned;
-use portage_atom::{Cpn, Cpv, Dep, DepEntry, Version};
+use portage_atom::{Cpn, Cpv, Dep, DepEntry};
 use portage_atom_pubgrub::{
     InMemoryRepository, PackageDeps, PortageDependencyProvider, PortagePackage, PortageVersionSet,
     UseConfig,
@@ -266,19 +263,10 @@ fn make_root_deps(atoms: &[&str]) -> Vec<(PortagePackage, PortageVersionSet)> {
 fn solve_and_print(repo: &InMemoryRepository, use_config: UseConfig, root_atoms: &[&str]) {
     let mut provider = PortageDependencyProvider::new(repo.clone(), use_config);
 
-    let root = PortagePackage::unslotted(Cpn::parse("virtual/root").unwrap());
-    let root_version = Version::parse("1").unwrap();
-    provider.add_root(
-        root.clone(),
-        root_version.clone(),
-        make_root_deps(root_atoms),
-    );
-
-    match pubgrub::resolve(&provider, root, root_version) {
+    match provider.resolve_targets(make_root_deps(root_atoms)) {
         Ok(solution) => {
             let mut pkgs: Vec<_> = solution
                 .iter()
-                .filter(|(pkg, _)| pkg.cpn.category != "virtual")
                 .map(|(pkg, ver)| format!("{}/{}-{}", pkg.cpn.category, pkg.cpn.package, ver))
                 .collect();
             pkgs.sort();
