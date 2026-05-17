@@ -59,9 +59,9 @@ fn main() {
         Cpv::parse("dev-libs/openssl-3.2.1").unwrap(),
         Some(Interned::intern("3")),
         None,
-        dep_entries(vec![
-            DepEntry::Atom(Dep::parse(">=sys-libs/zlib-1.2").unwrap()),
-        ]),
+        dep_entries(vec![DepEntry::Atom(
+            Dep::parse(">=sys-libs/zlib-1.2").unwrap(),
+        )]),
     );
 
     // net-misc/curl: slot 0, depends on openssl (RDEPEND) and zlib (BDEPEND)
@@ -70,7 +70,9 @@ fn main() {
         Some(Interned::intern("0")),
         None,
         PackageDeps {
-            depend: vec![DepEntry::Atom(Dep::parse(">=dev-libs/openssl-3.0").unwrap())],
+            depend: vec![DepEntry::Atom(
+                Dep::parse(">=dev-libs/openssl-3.0").unwrap(),
+            )],
             rdepend: vec![DepEntry::Atom(Dep::parse("dev-libs/openssl").unwrap())],
             bdepend: vec![DepEntry::Atom(Dep::parse(">=sys-libs/zlib-1.2").unwrap())],
             pdepend: vec![],
@@ -83,9 +85,7 @@ fn main() {
         Cpv::parse("app-misc/myapp-1.0").unwrap(),
         None,
         None,
-        dep_entries(vec![
-            DepEntry::Atom(Dep::parse("net-misc/curl").unwrap()),
-        ]),
+        dep_entries(vec![DepEntry::Atom(Dep::parse("net-misc/curl").unwrap())]),
     );
 
     let use_config = UseConfig::new();
@@ -117,9 +117,7 @@ fn main() {
         };
         println!(
             "  {}-{} --[{}]--> {}-{}",
-            edge.from.0, edge.from.1,
-            class,
-            edge.to.0, edge.to.1,
+            edge.from.0, edge.from.1, class, edge.to.0, edge.to.1,
         );
     }
 

@@ -276,15 +276,18 @@ impl PortageDependencyProvider {
             merged: Dependencies::Available(constraints),
             by_class: vec![targets, vec![], vec![], vec![], vec![]],
         };
-        let entry = self.packages.entry(root.clone()).or_insert_with(|| PackageData {
-            versions: BTreeMap::new(),
-            blockers: BTreeMap::new(),
-            use_deps: BTreeMap::new(),
-            iuse: BTreeMap::new(),
-            repo: BTreeMap::new(),
-            repo_constraints: BTreeMap::new(),
-            slot_operator_deps: BTreeMap::new(),
-        });
+        let entry = self
+            .packages
+            .entry(root.clone())
+            .or_insert_with(|| PackageData {
+                versions: BTreeMap::new(),
+                blockers: BTreeMap::new(),
+                use_deps: BTreeMap::new(),
+                iuse: BTreeMap::new(),
+                repo: BTreeMap::new(),
+                repo_constraints: BTreeMap::new(),
+                slot_operator_deps: BTreeMap::new(),
+            });
         entry.versions.insert(root_ver.clone(), vd);
 
         let solution = pubgrub::resolve(self, root.clone(), root_ver)?;
@@ -420,7 +423,12 @@ mod tests {
         repo.add_version(openssl_cpv, Some(Interned::intern("0")), None, empty_deps());
 
         let openssl_cpv2 = portage_atom::Cpv::parse("dev-libs/openssl-3.1.0").unwrap();
-        repo.add_version(openssl_cpv2, Some(Interned::intern("0")), None, empty_deps());
+        repo.add_version(
+            openssl_cpv2,
+            Some(Interned::intern("0")),
+            None,
+            empty_deps(),
+        );
 
         let rust_cpv = portage_atom::Cpv::parse("dev-lang/rust-1.75.0").unwrap();
         repo.add_version(

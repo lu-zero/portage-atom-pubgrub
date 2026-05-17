@@ -56,7 +56,10 @@ impl PortageDependencyProvider {
         // Index solution by CPN so dependency lookups are O(1) instead of O(n).
         let mut by_cpn: HashMap<&Cpn, Vec<(&PortagePackage, &Version)>> = HashMap::new();
         for (sol_pkg, sol_ver) in solution.iter() {
-            by_cpn.entry(&sol_pkg.cpn).or_default().push((sol_pkg, sol_ver));
+            by_cpn
+                .entry(&sol_pkg.cpn)
+                .or_default()
+                .push((sol_pkg, sol_ver));
         }
 
         for (pkg, version) in solution.iter() {
